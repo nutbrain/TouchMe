@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Touch Me</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://cdn.bootcss.com/localforage/1.7.3/localforage.min.js"></script>
+    <style>
+        h1 {
+            text-align: center;
+            font-family: cursive;
+        }
+        
+        button.touchbutton {
+            width: 50%;
+            height: 5rem;
+            margin: 0 auto;
+            display: block;
+            border: none;
+            border-radius: 10px;
+            background: rgb(190, 231, 190);
+            font-size: 2em;
+            font-family:cursive;
+        }
+        ul{
+            width: 50%;
+            margin:5em auto;
+            line-height: 2em;
+        }
+        span.records{
+            color:red;
+        }
+        button.clear{
+            background-color: bisque;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <button class="clear" @click="handleClear">清除记录</button>
+        <h1>{{title}}</h1>
+        <button class="touchbutton" @click="handleTouch">Touch Me!</button>
+        
+        <ul>
+            <li v-for="(timestamp,index) in timestamps">
+                <span class="records">{{new Date(timestamp).toLocaleString()}}</span>: 记录了你的行为! 距离上次 <span class="records">{{formatTimesegment(timesegments[index])}}</span>.
+            </li>
+        </ul>
+    </div>
+    <script lang="javascript">
+        var vm = new Vue({
+            el: "#app",
+            data: {
+                title: "Recording your behavior",
+                timestamps:[],
+                
+            },
+            methods:{
+                handleTouch(){
+                    var timestamp=Date.now();
+                    this.timestamps.unshift(timestamp);
+                },
+                formatTimesegment(timesegment){
+                    timesegment/=1000;
+                    var sec=timesegment%60;
+                    var min=Math.floor(timesegment/60)%60;
+                    var hour=Math.floor(timesegment/60/60)%24;
+                    var day=Math.floor(timesegment/60/60/24);
+                    return day+"天"+hour+"小时"+min+"分"+sec+"秒";
+                },
+                handleClear(){
+                    var sure=confirm("确定要清空记录吗？");
+                    sure && (sure=confirm("清空后无法恢复，确认清空吗？"));
+                    sure && localforage.clear().then(function(){
+                        location.reload();
+                        alert("清除记录成功");
+                    });
+
+                }
+            },
+            created:function(){
+                localforage.getItem('timestamps').then(function(timestamps){
+                    this.timestamps=timestamps || [];
+                }.bind(this)).catch(function(err){
+                    this.timestamps=[];
+                }.bind(this))
+            },
+            computed:{
+                timesegments:function(){
+                    if (!this.timestamps.length) {
+                        return [];
+                    } else {
+                        var timesegments=[];
+                        for (let index = 0; index < this.timestamps.length-1; index++) {
+                            timesegments.push(this.timestamps[index]-this.timestamps[index+1]);
+                        }
+                        timesegments.push(0);
+                        return timesegments;
+                    }
+                }
+            },
+            watch:{
+                timestamps:{
+                    handler:function(val,oldVal){
+                        localforage.setItem('timestamps',val);
+                    },
+                    deep:true
+                }
+            }
+
+        })
+    </script>
+</body>
+
+</html>
